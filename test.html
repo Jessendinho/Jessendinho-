@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API test</title>
+<style>
+body{background:#0f1115;color:#eef0f4;font:15px/1.5 system-ui,sans-serif;padding:16px;max-width:640px;margin:0 auto}
+h1{font-size:20px;margin-bottom:6px}
+p{color:#8b92a1;font-size:13px;margin-bottom:10px}
+button{background:#00d17a;color:#04140c;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:700}
+.r{background:#181b22;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px;word-break:break-word}
+small{color:#8b92a1}
+</style>
+</head>
+<body>
+<h1>GoalLine API test</h1>
+<p id="k"></p>
+<button id="go">Run test</button>
+<div id="out"></div>
+<script>
+const API = 'https://api.football-data.org/v4';
+let key = '';
+try { key = localStorage.getItem('gl_key') || ''; } catch (e) {}
+document.getElementById('k').textContent = key
+  ? 'Saved key found (' + key.length + ' characters, starts with ' + key.slice(0, 3) + '…). A real key is 32 characters.'
+  : 'No saved key found on this site.';
+
+function show(title, ok, detail) {
+  const d = document.createElement('div');
+  d.className = 'r';
+  d.innerHTML = (ok ? '✅ ' : '❌ ') + '<b>' + title + '</b><br><small>' + detail + '</small>';
+  document.getElementById('out').appendChild(d);
+}
+async function test(title, path, withKey) {
+  try {
+    const res = await fetch(API + path, withKey ? { headers: { 'X-Auth-Token': key } } : {});
+    const text = await res.text();
+    show(title, res.ok, 'HTTP ' + res.status + ' · ' + text.slice(0, 140).replace(/</g, '&lt;'));
+  } catch (e) {
+    show(title, false, 'Blocked before any answer (network, ad blocker, or browser CORS rule): ' + e.message);
+  }
+}
+document.getElementById('go').onclick = async () => {
+  document.getElementById('out').innerHTML = '';
+  const today = new Date().toISOString().slice(0, 10);
+  await test('1. Reach the site, no key', '/competitions/PL', false);
+  await test('2. Reach the site, with your key', '/competitions/PL', true);
+  await test('3. Today\'s matches, with your key', '/matches?dateFrom=' + today + '&dateTo=' + today, true);
+};
+</script>
+</body>
+</html>
