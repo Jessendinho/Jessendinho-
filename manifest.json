@@ -1,0 +1,13 @@
+{
+  "name": "GoalLine LIVE - By Jessendinho",
+  "short_name": "GoalLine",
+  "description": "LIVE football scores by Jessendinho",
+  "start_url": "/Jessendinho-/",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#00ff85",
+  "icons": [
+    {"src": "icon-192.png","sizes": "192x192","type": "image/png"},
+    {"src": "icon-512.png","sizes": "512x512","type": "image/png"}
+  ]
+}
