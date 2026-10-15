@@ -4,37 +4,80 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0f1115">
-<title>GoalLine</title>
+<title>GoalLine - LIVE</title>
 <link rel="stylesheet" href="style.css">
+<style>
+.live-dot{width:8px;height:8px;background:#ff3b30;border-radius:50%;display:inline-block;animation:pulse 1.5s infinite}
+@keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
+.match-card{background:#1a1d24;border-radius:12px;padding:12px;margin:8px;display:flex;align-items:center;justify-content:space-between;color:white}
+.team{display:flex;align-items:center;gap:8px}
+.team img{width:24px;height:24px}
+</style>
 </head>
 <body>
 <header class="top">
-  <h1>Goal<span>Line</span></h1>
+  <h1>Goal<span style="color:#00d084">Line</span> <small style="font-size:12px;background:#00d084;color:black;padding:2px 6px;border-radius:8px">LIVE</small></h1>
   <div class="right">
-    <a href="search.html" class="icon-btn" title="Search">🔍</a>
-    <button id="notifBtn" class="icon-btn" title="Goal alerts">🔔</button>
-    <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
+    <button onclick="loadScores()" class="icon-btn">🔄</button>
   </div>
 </header>
-<div id="demoBanner" class="banner" hidden>Demo data. Tap ⚙️ and paste your football-data.org key to go live.</div>
-<main id="view"></main>
-<nav class="tabs">
-  <button data-tab="matches" class="active">Matches</button>
-  <button data-tab="tables">Tables</button>
-  <button data-tab="favorites">Favorites</button>
-</nav>
-<div id="toast" class="toast" hidden></div>
-<div id="settings" class="modal" hidden>
-  <div class="box">
-    <h2>Settings</h2>
-    <p>Paste your free football-data.org API key to see real matches. It is saved only in this browser and is never uploaded. Leave empty for demo data.</p>
-    <input id="keyInput" type="password" placeholder="API key" autocomplete="off">
-    <div class="actions"><button id="cancelKey" class="btn">Cancel</button><button id="saveKey" class="btn primary">Save</button></div>
-  </div>
-</div>
 
-<script src="data.js"></script>
-<script src="demo.js"></script>
-<script src="index.js"></script>
+<div id="demoBanner" class="banner" style="background:#00d084;color:black;text-align:center;padding:8px">✅ Connected to your worker - LIVE scores active!</div>
+
+<main id="view" style="padding:10px">
+  <div id="scores">Loading...</div>
+</main>
+
+<nav class="tabs">
+  <button onclick="loadScores('today')" class="active">Today</button>
+  <button onclick="loadScores('live')">LIVE</button>
+  <button onclick="loadScores('yesterday')">Yesterday</button>
+</nav>
+
+<script>
+const WORKER = "https://old-poetry-cb6d.jessegitonga04.workers.dev/v3";
+
+async function loadScores(mode='today'){
+  const box = document.getElementById('scores');
+  box.innerHTML = 'Loading...';
+  let url = '';
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  
+  if(mode==='live') url = `${WORKER}/fixtures?live=all`;
+  else if(mode==='yesterday') url = `${WORKER}/fixtures?date=${yesterday}`;
+  else url = `${WORKER}/fixtures?date=${today}`;
+
+  try{
+    const res = await fetch(url, {headers:{'x-apisports-key':'env'}});
+    const data = await res.json();
+    const games = data.response || [];
+    
+    if(games.length===0){
+      box.innerHTML = `<p style="text-align:center;color:#888;margin-top:40px">No ${mode} games found.<br>Try LIVE or Today</p>`;
+      return;
+    }
+    
+    box.innerHTML = games.map(g=>`
+      <div class="match-card">
+        <div>
+          <small style="color:#888">${g.league.name} • ${g.fixture.status.short} ${g.fixture.status.elapsed? g.fixture.status.elapsed+"'":''} ${g.fixture.status.short==='1H'||g.fixture.status.short==='2H'? '<span class="live-dot"></span>':''}</small><br>
+          <div class="team"><img src="${g.teams.home.logo}">${g.teams.home.name}</div>
+          <div class="team"><img src="${g.teams.away.logo}">${g.teams.away.name}</div>
+        </div>
+        <div style="font-size:20px;font-weight:bold">
+          ${g.goals.home??0} - ${g.goals.away??0}
+        </div>
+      </div>
+    `).join('');
+    
+  }catch(e){
+    box.innerHTML = `<p style="color:red">Error: ${e.message}<br>Check worker: ${WORKER}/status</p>`;
+  }
+}
+
+loadScores('today');
+setInterval(()=>loadScores('live'), 60000); // auto refresh live every 60s
+</script>
 </body>
 </html>
