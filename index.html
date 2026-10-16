@@ -1,27 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><style>
-@font-face {
-  font-family: "Optimistic";
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Optimistic Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
-}
-:where(html) {
-  font-family: "Optimistic", system-ui, sans-serif;
-}
-:where(code, pre, kbd, samp) {
-  font-family: "Optimistic Mono", ui-monospace, monospace;
-}
-</style>
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>jeScores - Every Goal. Every Update.</title>
@@ -326,4 +305,30 @@ async function draw(){
    let data=await res.json();
    let stats=data.response||[];
    if(stats.length===0){
-    ct.innerHTML=`<div style="background:#121212;border:1px solid #1e3d2a;border-radius:10px;padding:12px;color:#888;font-size:11px">No stats yet - ${curG.fixture.status.long
+    ct.innerHTML=`<div style="background:#121212;border:1px solid #1e3d2a;border-radius:10px;padding:12px;color:#888;font-size:11px">No stats yet - ${curG.fixture.status.long}<br><br>When live: xG, Possession, Shots, Corners<br><br>jeScores • Every Goal. Every Update.</div>`;
+   } else {
+    let html=`<div style="background:#121212;border:1px solid #1e3d2a;border-radius:10px;padding:10px">`;
+    let types=[...new Set(stats.flatMap(s=>s.statistics.map(st=>st.type)))];
+    types.forEach(type=>{
+     let hv=stats[0]?.statistics.find(s=>s.type===type)?.value;
+     let av=stats[1]?.statistics.find(s=>s.type===type)?.value;
+     if(hv==null && av==null) return;
+     let hN=parseInt(hv)||0, aN=parseInt(av)||0, total=hN+aN||1, pct=(hN/total)*100;
+     html+=`<div style="padding:6px 0;border-bottom:1px solid #1a1a1a"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800"><span style="color:${hN>=aN?'#e8b84b':'#777'}">${hv}</span><span style="color:#666;font-size:10px">${type}</span><span style="color:${aN>=hN?'#e8b84b':'#777'}">${av}</span></div><div style="height:5px;background:#1a1a1a;border-radius:3px;display:flex;margin-top:4px"><div style="width:${pct}%;background:#e8b84b;height:100%"></div><div style="width:${100-pct}%;background:#333;height:100%"></div></div></div>`;
+    });
+    html+=`</div>`;
+    ct.innerHTML=html;
+   }
+  }catch(e){ct.innerHTML=`Error: ${e.message}`;}
+ } else {
+  ct.innerHTML=`<div style="background:#121212;border:1px solid #1e3d2a;border-radius:10px;padding:12px;color:#888;font-size:11px">jeScores • ${curT.toUpperCase()} • Every Goal. Every Update.<br><br>Endpoint: /fixtures/${curT}?fixture=${curG.fixture.id}<br><br>Real data when available.</div>`;
+ }
+}
+function toggleFav(team){
+ if(!fav.includes(team)){fav.push(team);localStorage.setItem('jeScores_fav',JSON.stringify(fav));alert(`⭐ Following ${team} - appears in Following tab`);} else {fav=fav.filter(t=>t!==team);localStorage.setItem('jeScores_fav',JSON.stringify(fav));alert(`Unfollowed ${team}`);}
+}
+load();
+setInterval(()=>{if(curPage==='home'||curPage==='scores') load();},30000);
+</script>
+</body>
+</html>
