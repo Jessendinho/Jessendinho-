@@ -26,20 +26,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>jeScores - Every Goal. Every Update.</title>
 <meta name="theme-color" content="#0a2e1c">
-<meta name="description" content="jeScores - Every Goal. Every Update. Free live football scores, fixtures, lineups, stats, H2H by Jessendinho">
 <style>
 :root{--green:#0a2e1c;--green2:#123d26;--gold:#e8b84b;--dark:#080808;--card:#121212;--border:#1e3d2a}
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
 body{background:var(--dark);color:#fff}
-header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);color:#fff;padding:10px 12px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:100;border-bottom:2px solid var(--gold)}
+header{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;padding:10px 12px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:100;border-bottom:2px solid var(--gold)}
 .logoArea{display:flex;align-items:center;gap:8px}
-.logoIcon{width:38px;height:38px;background:#0f3d26;border-radius:9px;display:grid;place-items:center;border:1.5px solid var(--gold);overflow:hidden;box-shadow:0 2px 8px rgba(232,184,75,.2)}
-.logoIcon img{width:100%;height:100%;object-fit:cover}
-.logoText{font-weight:900;font-size:20px;letter-spacing:-0.5px;line-height:1}
-.logoText .je{color:var(--gold)}.logoText .scores{color:#fff}
+.logoIcon{width:38px;height:38px;background:#0f3d26;border-radius:9px;display:grid;place-items:center;border:1.5px solid var(--gold)}
+.logoText{font-weight:900;font-size:20px;line-height:1}.je{color:var(--gold)}.scores{color:#fff}
 .logoText small{display:block;font-size:7px;letter-spacing:2px;color:var(--gold);font-weight:700;margin-top:2px}
-.slogan{font-size:8px;color:rgba(232,184,75,.9);font-weight:600;letter-spacing:.8px;margin-top:1px;font-style:italic}
-.search{flex:1;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:20px;padding:6px 12px;display:flex;gap:6px}
+.slogan{font-size:8px;color:rgba(232,184,75,.9);font-weight:600;letter-spacing:.8px;font-style:italic}
+.search{flex:1;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:20px;padding:6px 12px}
 .search input{border:none;background:transparent;outline:none;width:100%;font-weight:600;color:#fff;font-size:12px}
 .search input::placeholder{color:rgba(255,255,255,.5)}
 .date{background:rgba(232,184,75,.15);border:1px solid var(--gold);border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;color:var(--gold)}
@@ -50,44 +47,48 @@ header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);col
 .filters{background:#0f0f0f;padding:8px 10px;display:flex;gap:6px;overflow:auto;border-bottom:1px solid var(--border);position:sticky;top:64px;z-index:90}
 .chip{padding:6px 12px;border-radius:20px;background:#1a1a1a;color:#888;font-size:11px;font-weight:700;white-space:nowrap;border:1px solid #2a2a2a;cursor:pointer}
 .chip.on{background:var(--gold);color:#000;border-color:var(--gold)}
-#main{padding:10px;padding-bottom:100px;min-height:60vh}
+#main{padding:10px;padding-bottom:100px;min-height:70vh}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px;cursor:pointer}
-.card.live{border-color:var(--gold);box-shadow:0 0 0 1px rgba(232,184,75,.2)}
+.card.live{border-color:var(--gold)}
 .top{font-size:8px;color:var(--gold);font-weight:800;display:flex;justify-content:space-between;text-transform:uppercase}
 .row{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
 .team{flex:1;font-weight:700;font-size:13px}.r{text-align:right}
 .score{background:#000;border-radius:7px;padding:4px 10px;min-width:60px;text-align:center;font-weight:900;font-size:14px;border:1px solid var(--border);color:#fff}
 .score.live{color:var(--gold);border-color:var(--gold)}
-.time{font-size:9px;color:#666;text-align:center;margin-top:3px;font-weight:600}.time.live{color:var(--gold)}
-.empty{text-align:center;padding:40px 12px;color:#777;font-size:13px}
+.time{font-size:9px;color:#666;text-align:center;margin-top:3px}.time.live{color:var(--gold)}
+.empty{text-align:center;padding:40px 12px;color:#777;font-size:13px;line-height:1.6}
 .bottom{position:fixed;bottom:0;left:0;right:0;background:#0a0a0a;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:7px 0 10px;z-index:100}
-.ni{flex:1;text-align:center;font-size:9px;color:#666;font-weight:700}.ni.on{color:var(--gold)}.ni span{font-size:16px;display:block}
+.ni{flex:1;text-align:center;font-size:9px;color:#666;font-weight:700;cursor:pointer;padding:4px}
+.ni.on{color:var(--gold);background:rgba(232,184,75,.08);border-radius:10px}
+.ni span{font-size:18px;display:block}
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;z-index:200;align-items:flex-end}
 #modal.show{display:flex}
 .box{background:#0f0f0f;width:100%;max-height:88vh;border-radius:16px 16px 0 0;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid var(--gold)}
-.mh{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.mh{background:linear-gradient(135deg,var(--green),var(--green2));padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
 .mh b{color:#fff;font-size:13px}.mh b span{color:var(--gold)}
 .close{width:28px;height:28px;border-radius:50%;border:1px solid var(--gold);background:rgba(0,0,0,.3);color:var(--gold);font-size:16px;cursor:pointer}
 .tabs{display:flex;gap:5px;padding:8px;background:#0a0a0a;border-bottom:1px solid var(--border)}
 .tb{flex:1;padding:7px;border-radius:8px;background:#1a1a1a;color:#777;font-size:9px;font-weight:800;text-align:center;cursor:pointer;border:1px solid #222}
 .tb.on{background:var(--gold);color:#000;border-color:var(--gold)}
-.ct{overflow:auto;padding:12px;flex:1}
-.footerBrand{text-align:center;padding:16px 12px;color:#555;font-size:10px;border-top:1px solid var(--border);margin-top:20px;line-height:1.6}
-.footerBrand b{color:var(--gold)}.footerBrand .sloganF{color:var(--gold);font-style:italic;font-weight:700;letter-spacing:.5px}
+.ct{overflow:auto;padding:12px;flex:1;font-size:12px}
+.footer{text-align:center;padding:16px 12px;color:#555;font-size:10px;border-top:1px solid var(--border);margin-top:20px}
+.footer b{color:var(--gold)}
+.btn{padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.btnGold{background:var(--gold);color:#000;border-color:var(--gold)}
 </style>
 </head>
 <body>
 <header>
 <div class="logoArea">
-<div class="logoIcon"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/" alt="jeScores" onerror="this.parentElement.innerHTML='<span style=color:#e8b84b;font-weight:900;font-size:20px>J</span>'"></div>
+<div class="logoIcon"><span style="color:var(--gold);font-weight:900;font-size:22px">J</span></div>
 <div class="logoText"><div><span class="je">je</span><span class="scores">Scores</span></div><small>BY JESSENDINHO</small><div class="slogan">Every Goal. Every Update.</div></div>
 </div>
 <div class="search">🔍 <input id="q" placeholder="Search team..." oninput="render()"></div>
 <div class="date">📅 <input type="date" id="d"></div>
 </header>
-<div class="status"><span class="dot"></span><span id="st">jeScores • Every Goal. Every Update. • REAL • LIVE</span></div>
+<div class="status"><span class="dot"></span><span id="st">jeScores • Every Goal. Every Update.</span></div>
 
-<div class="filters">
+<div class="filters" id="filters">
 <div class="chip on" data-f="All" onclick="setL('All')">All</div>
 <div class="chip" data-f="Kenya PL" onclick="setL('Kenya PL')">Kenya PL</div>
 <div class="chip" data-f="EPL" onclick="setL('EPL')">EPL</div>
@@ -97,10 +98,13 @@ header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);col
 
 <div id="main"></div>
 
-<div class="footerBrand"><b>jeScores</b> • <span class="sloganF">Every Goal. Every Update.</span><br>Crafted by Jessendinho • Free Football Platform<br>Inspired by FotMob • LiveScore • SofaScore</div>
+<div class="footer"><b>jeScores</b> • <i style="color:var(--gold)">Every Goal. Every Update.</i><br>Crafted by Jessendinho • Free Football Platform</div>
 
 <div class="bottom">
-<div class="ni on"><span>🏠</span>Home</div><div class="ni"><span>📊</span>Scores</div><div class="ni"><span>🏆</span>Comp</div><div class="ni"><span>⭐</span>Following</div>
+<div class="ni on" id="nav-home" onclick="setPage('home')"><span>🏠</span>Home</div>
+<div class="ni" id="nav-scores" onclick="setPage('scores')"><span>📊</span>Scores</div>
+<div class="ni" id="nav-comp" onclick="setPage('comp')"><span>🏆</span>Comps</div>
+<div class="ni" id="nav-fav" onclick="setPage('fav')"><span>⭐</span>Following</div>
 </div>
 
 <div id="modal" onclick="if(event.target.id==='modal')closeM()">
@@ -118,11 +122,12 @@ header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);col
 
 <script>
 const W="https://old-poetry-cb6d.jessegitonga04.workers.dev";
-let games=[],curL="All",curG=null,curT="lineup",curM="predicted";
+let games=[],filtered=[],curL="All",curG=null,curT="lineup",curM="predicted",curPage="home",fav=JSON.parse(localStorage.getItem('jeScores_fav')||'[]');
 document.getElementById('d').valueAsDate=new Date();
+
 async function load(){
  const main=document.getElementById('main');
- document.getElementById('st').textContent="jeScores • Every Goal. Every Update. • Loading...";
+ document.getElementById('st').textContent="jeScores • Loading...";
  try{
   let date=document.getElementById('d').value;
   let res=await fetch(`${W}/v3/fixtures?date=${date}`);
@@ -133,19 +138,20 @@ async function load(){
    let yS=y.toISOString().split('T')[0];
    let res2=await fetch(`${W}/v3/fixtures?date=${yS}`);
    let data2=await res2.json();
-   fix=(data2.response||[]).slice(0,30);
+   fix=(data2.response||[]).slice(0,40);
   }
   if(fix.length===0){
-   main.innerHTML='<div class="empty">No fixtures today.<br>jeScores • Every Goal. Every Update.<br><br>Check worker has API_FOOTBALL_KEY</div>';
+   main.innerHTML='<div class="empty">No fixtures today.<br>jeScores • Every Goal. Every Update.<br><br>Check worker API_FOOTBALL_KEY</div>';
    return;
   }
-  document.getElementById('st').textContent=`jeScores • Every Goal. Every Update. • ${fix.length} matches • ${fix.filter(f=>["1H","2H","LIVE"].includes(f.fixture.status.short)).length} LIVE`;
   games=fix;
+  document.getElementById('st').textContent=`jeScores • ${fix.length} matches • LIVE ${fix.filter(f=>["1H","2H","LIVE"].includes(f.fixture.status.short)).length} • Every Goal. Every Update.`;
   render();
  }catch(e){
-  main.innerHTML=`<div class="empty">Error ${e.message}<br><button onclick="load()" style="margin-top:10px;padding:6px 12px;border-radius:20px;background:#121212;color:#e8b84b;border:1px solid #e8b84b">Retry</button></div>`;
+  main.innerHTML=`<div class="empty">Error ${e.message}<br><button class="btn btnGold" style="margin-top:10px" onclick="load()">Retry</button></div>`;
  }
 }
+
 function render(){
  let f=games;
  if(curL!=="All") f=f.filter(g=>{
@@ -158,31 +164,137 @@ function render(){
  });
  let q=document.getElementById('q').value.toLowerCase();
  if(q) f=f.filter(g=>(g.teams.home.name+g.teams.away.name).toLowerCase().includes(q));
- if(f.length===0) f=games;
+ if(f.length===0 && games.length>0) f=games;
+ filtered=f;
  document.getElementById('main').innerHTML=f.map(g=>{
   let live=["1H","2H","HT","LIVE"].includes(g.fixture.status.short);
   let sc=g.fixture.status.short==="NS"?"vs":`${g.goals.home??"-"} - ${g.goals.away??"-"}`;
+  let isFav=fav.includes(g.teams.home.name)||fav.includes(g.teams.away.name);
   return `<div class="card ${live?'live':''}" onclick="openM(${g.fixture.id})">
-   <div class="top"><span>${g.league.name}</span><span style="color:${live?'#e8b84b':'#666'}">${g.fixture.status.short}</span></div>
+   <div class="top"><span>${g.league.name}</span><span style="color:${live?'#e8b84b':'#666'}">${g.fixture.status.short} ${isFav?'⭐':''}</span></div>
    <div class="row"><div class="team">${g.teams.home.name}</div><div class="score ${live?'live':''}">${sc}</div><div class="team r">${g.teams.away.name}</div></div>
-   <div class="time ${live?'live':''}">${live?'● LIVE • Every Goal. Every Update.':g.fixture.status.long+' • jeScores'}</div>
+   <div class="time ${live?'live':''}">${live?'● LIVE • Every Goal. Every Update.':g.fixture.status.long+' • Tap for REAL lineups'}</div>
   </div>`;
  }).join('');
 }
+
 function setL(l){curL=l;document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.f===l));render();}
+
+function setPage(p){
+ curPage=p;
+ document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+ document.getElementById('nav-'+p).classList.add('on');
+ if(p==='home'){
+  document.getElementById('filters').style.display='flex';
+  render();
+ } else if(p==='scores'){
+  document.getElementById('filters').style.display='flex';
+  document.getElementById('d').valueAsDate=new Date();
+  load();
+ } else if(p==='comp'){
+  document.getElementById('filters').style.display='none';
+  loadComps();
+ } else if(p==='fav'){
+  document.getElementById('filters').style.display='none';
+  loadFav();
+ }
+}
+
+async function loadComps(){
+ const main=document.getElementById('main');
+ main.innerHTML='<div class="empty">Loading competitions...<br>jeScores • Every Goal. Every Update.</div>';
+ try{
+  const res=await fetch(`${W}/v3/leagues`);
+  const data=await res.json();
+  let leagues=data.response||[];
+  const popular=[39,140,135,78,61,2,3,324,253];
+  let sorted=[...leagues].sort((a,b)=>{
+   let ai=popular.indexOf(a.league.id), bi=popular.indexOf(b.league.id);
+   if(ai!==-1 && bi===-1) return -1;
+   if(ai===-1 && bi!==-1) return 1;
+   return 0;
+  }).slice(0,60);
+  if(sorted.length===0){
+   sorted=[
+    {league:{id:39,name:"Premier League",country:"England"},country:{name:"England"}},
+    {league:{id:324,name:"Kenya Premier League",country:"Kenya"},country:{name:"Kenya"}},
+    {league:{id:140,name:"La Liga",country:"Spain"},country:{name:"Spain"}},
+    {league:{id:2,name:"UEFA Champions League",country:"World"},country:{name:"World"}},
+    {league:{id:135,name:"Serie A",country:"Italy"},country:{name:"Italy"}}
+   ];
+  }
+  main.innerHTML=`<div style="padding:5px 0"><b style="color:#e8b84b">🏆 Competitions • jeScores</b><div style="font-size:10px;color:#888;margin:4px 0 10px">Tap any league for standings • Every Goal. Every Update.</div></div>`+
+   sorted.map(l=>`
+    <div class="card" onclick="openLeague(${l.league.id},'${l.league.name.replace(/'/g,"")}')">
+     <div class="top"><span>${l.country.name||l.league.country||"World"}</span><span>ID ${l.league.id}</span></div>
+     <div class="row"><div class="team">${l.league.name}</div><div style="font-size:11px;color:#e8b84b">Standings →</div></div>
+    </div>
+   `).join('');
+ }catch(e){
+  main.innerHTML=`<div class="empty">Failed to load comps: ${e.message}<br><button class="btn btnGold" onclick="loadComps()">Retry</button></div>`;
+ }
+}
+
+async function openLeague(id,name){
+ const main=document.getElementById('main');
+ main.innerHTML=`<div class="empty">Loading ${name} standings...<br><button class="btn" onclick="loadComps()" style="margin-top:10px">← Back</button></div>`;
+ try{
+  const res=await fetch(`${W}/v3/standings?league=${id}&season=2023`);
+  const data=await res.json();
+  const standings=data.response?.[0]?.league?.standings?.[0]||[];
+  if(standings.length===0){
+   main.innerHTML=`<div class="empty">No standings for ${name} (2023)<br>Try 2024 season<br><br><button class="btn" onclick="loadComps()">← Back to Comps</button><br><br><button class="btn btnGold" onclick="openLeague(${id},'${name}')">Try Again</button></div>`;
+   return;
+  }
+  main.innerHTML=`<div style="padding:5px">
+   <div style="display:flex;justify-content:space-between;align-items:center"><b style="color:#e8b84b">${name} • 2023</b><button class="btn" onclick="loadComps()">← Back</button></div>
+   <div style="margin-top:10px;background:#121212;border:1px solid #1e3d2a;border-radius:10px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="background:#0a2e1c;color:#e8b84b"><th style="padding:8px 4px;text-align:left">#</th><th style="text-align:left">Team</th><th>P</th><th>W</th><th>Pts</th></tr>
+    ${standings.map(s=>`<tr style="border-bottom:1px solid #1a1a1a"><td style="padding:7px 4px">${s.rank}</td><td>${s.team.name}</td><td>${s.all.played}</td><td>${s.all.win}</td><td><b style="color:#e8b84b">${s.points}</b></td></tr>`).join('')}
+    </table>
+   </div>
+   <div style="margin-top:10px;text-align:center"><button class="btn btnGold" onclick="loadComps()">← All Competitions</button></div>
+  </div>`;
+ }catch(e){
+  main.innerHTML=`<div class="empty">Error: ${e.message}<br><button class="btn" onclick="loadComps()">Back</button></div>`;
+ }
+}
+
+function loadFav(){
+ const main=document.getElementById('main');
+ if(fav.length===0){
+  main.innerHTML=`<div class="empty">⭐ No Following yet<br><br>Tap ⭐ on any team to follow<br>Followed teams appear here and on Home<br><br>jeScores • Every Goal. Every Update.<br><br><button class="btn btnGold" onclick="setPage('home')">← Browse Matches</button></div>`;
+  return;
+ }
+ let f=games.filter(g=>fav.includes(g.teams.home.name)||fav.includes(g.teams.away.name));
+ if(f.length===0){
+  main.innerHTML=`<div class="empty">Following: ${fav.join(', ')}<br><br>No live matches for your teams today<br><br><button class="btn btnGold" onclick="setPage('home')">← Home</button> <button class="btn" onclick="clearFav()">Clear All</button></div>`;
+  return;
+ }
+ main.innerHTML=`<div style="padding:5px 0"><b style="color:#e8b84b">⭐ Following • ${fav.length} teams</b><div style="font-size:10px;color:#888;margin:4px 0 10px">${fav.join(', ')}</div></div>`+
+  f.map(g=>{
+   let live=["1H","2H","HT","LIVE"].includes(g.fixture.status.short);
+   let sc=g.fixture.status.short==="NS"?"vs":`${g.goals.home??"-"} - ${g.goals.away??"-"}`;
+   return `<div class="card ${live?'live':''}" onclick="openM(${g.fixture.id})"><div class="top"><span>${g.league.name}</span><span>⭐ Following</span></div><div class="row"><div class="team">${g.teams.home.name}</div><div class="score ${live?'live':''}">${sc}</div><div class="team r">${g.teams.away.name}</div></div></div>`;
+  }).join('')+`<div style="text-align:center;margin-top:15px"><button class="btn" onclick="clearFav()">Clear Following</button></div>`;
+}
+
+function clearFav(){fav=[];localStorage.setItem('jeScores_fav',JSON.stringify(fav));loadFav();}
+
 function openM(id){
  curG=games.find(g=>g.fixture.id===id);
+ if(!curG) return;
  document.getElementById('mt').innerHTML=curG.teams.home.name+" vs "+curG.teams.away.name+' • <span>jeScores</span>';
  document.getElementById('modal').classList.add('show');
  setT('lineup');
 }
 function closeM(){document.getElementById('modal').classList.remove('show')}
-function setT(t){curT=t;document.getElementById('t1').classList.toggle('on',t==='lineup');document.getElementById('t2').classList.toggle('on',t==='h2h');document.getElementById('t3').classList.toggle('on',t==='stats');document.getElementById('t4').classList.toggle('on',t==='events');draw();}
+function setT(t){curT=t;document.querySelectorAll('.tabs .tb').forEach((el,i)=>{let names=['lineup','h2h','stats','events'];el.classList.toggle('on',names[i]===t)});draw();}
 function setMode(m){curM=m;draw();}
 async function draw(){
  let ct=document.getElementById('ct');
  if(curT==='lineup'){
-  ct.innerHTML='<div style="padding:20px;text-align:center;color:#e8b84b">jeScores • Every Goal. Every Update.<br><br>Loading REAL lineups...</div>';
+  ct.innerHTML='<div style="padding:20px;text-align:center;color:#e8b84b">jeScores • Loading REAL lineups...</div>';
   try{
    let res=await fetch(`${W}/v3/fixtures/lineups?fixture=${curG.fixture.id}`);
    let data=await res.json();
@@ -190,37 +302,28 @@ async function draw(){
    if(lineups.length===0){
     ct.innerHTML=`
      <div style="display:flex;gap:5px;margin-bottom:8px">
-      <button onclick="setMode('predicted')" class="tb ${curM==='predicted'?'on':''}" style="flex:1">PREDICTED <span style="background:#e8b84b;color:#000;padding:1px 4px;border-radius:6px;font-size:6px">2 DAYS</span></button>
-      <button onclick="setMode('official')" class="tb ${curM==='official'?'on':''}" style="flex:1">OFFICIAL <span style="background:#fff;color:#000;padding:1px 4px;border-radius:6px;font-size:6px">1H</span></button>
+      <button onclick="setMode('predicted')" class="tb ${curM==='predicted'?'on':''}" style="flex:1">PREDICTED</button>
+      <button onclick="setMode('official')" class="tb ${curM==='official'?'on':''}" style="flex:1">OFFICIAL</button>
      </div>
-     <div style="background:#0a2e1c;border:1px solid #e8b84b;border-radius:10px;padding:12px;color:#ccc;font-size:11px;line-height:1.5">
-      <b style="color:#e8b84b">jeScores • ${curM==='predicted'?'Predicted':'Official'} • Every Goal. Every Update.</b><br><br>
-      No lineups yet for ${curG.teams.home.name} vs ${curG.teams.away.name}<br><br>
-      ${curM==='predicted'?'Predicted XI available 2 days before kickoff':'Official XI available 1h before kickoff'}<br><br>
-      Status: ${curG.fixture.status.long}<br>
-      Endpoint: /fixtures/lineups?fixture=${curG.fixture.id}<br><br>
-      <i style="color:#888">jeScores shows honest data - no fake players.</i>
-     </div>
-    `;
+     <div style="background:#0a2e1c;border:1px solid #e8b84b;border-radius:10px;padding:12px;color:#ccc;font-size:11px">
+      <b style="color:#e8b84b">No lineups yet • Every Goal. Every Update.</b><br><br>
+      ${curG.teams.home.name} vs ${curG.teams.away.name}<br>Status: ${curG.fixture.status.long}<br><br>
+      ${curM==='predicted'?'Predicted XI 2 days before kickoff':'Official XI 1h before kickoff'}<br><br>
+      <button class="btn btnGold" onclick="toggleFav('${curG.teams.home.name}')">⭐ Follow ${curG.teams.home.name}</button>
+      <button class="btn" onclick="toggleFav('${curG.teams.away.name}')">⭐ Follow ${curG.teams.away.name}</button>
+      <div style="margin-top:10px;color:#888;font-size:10px">Fixed: No fake Kenyan players for La Liga</div>
+     </div>`;
    } else {
     ct.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-     ${lineups.map(l=>`
-      <div style="background:#121212;border:1px solid #1e3d2a;border-radius:10px;padding:8px">
-       <b style="font-size:11px;color:#e8b84b">${l.team.name} <span style="color:#fff">${l.formation||''}</span></b><br>
-       <div style="font-size:9px;color:#888;margin:4px 0">Coach: ${l.coach?.name||'TBA'}</div>
-       ${(l.startXI||[]).map(p=>`<div style="font-size:11px;padding:3px 0;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between"><span>${p.player.number||''} ${p.player.name}</span><span style="color:#888">${p.player.pos||''}</span></div>`).join('')}
-       <div style="margin-top:6px;font-size:9px;color:#666">Bench: ${(l.substitutes||[]).map(p=>p.player.name).join(', ')}</div>
-      </div>
-     `).join('')}
+     ${lineups.map(l=>`<div style="background:#121212;border:1px solid #1e3d2a;border-radius:10px;padding:8px"><b style="font-size:11px;color:#e8b84b">${l.team.name} ${l.formation||''}</b><div style="font-size:9px;color:#888;margin:4px 0">Coach: ${l.coach?.name||'TBA'}</div>${(l.startXI||[]).map(p=>`<div style="font-size:11px;padding:3px 0;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between"><span>${p.player.number||''} ${p.player.name}</span><span style="color:#888">${p.player.pos||''}</span></div>`).join('')}<div style="margin-top:6px;font-size:9px;color:#666">Bench: ${(l.substitutes||[]).map(p=>p.player.name).join(', ')}</div></div>`).join('')}
     </div>`;
    }
   }catch(e){ct.innerHTML=`Error: ${e.message}`;}
- } else {
-  ct.innerHTML=`<div style="background:#121212;border:1px solid #1e3d2a;border-radius:10px;padding:12px;color:#888;font-size:11px">jeScores • ${curT.toUpperCase()} • Every Goal. Every Update.<br><br>Endpoint: /fixtures/${curT}?fixture=${curG.fixture.id}<br><br>Real data when available, honest empty state when not.</div>`;
- }
-}
-load();
-setInterval(()=>{load()},30000);
-</script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
-</html>
+ } else if(curT==='stats'){
+  ct.innerHTML='<div style="padding:20px;text-align:center;color:#e8b84b">Loading stats...</div>';
+  try{
+   let res=await fetch(`${W}/v3/fixtures/statistics?fixture=${curG.fixture.id}`);
+   let data=await res.json();
+   let stats=data.response||[];
+   if(stats.length===0){
+    ct.innerHTML=`<div style="background:#121212;border:1px solid #1e3d2a;border-radius:10px;padding:12px;color:#888;font-size:11px">No stats yet - ${curG.fixture.status.long
