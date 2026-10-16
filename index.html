@@ -24,7 +24,7 @@
 </style>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JESSENDINHO FOOTBALL</title>
+<title>JESSENDINHO FOOTBALL - FIXED</title>
 <meta name="theme-color" content="#00ff85">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
@@ -60,9 +60,6 @@ header{background:#00ff85;color:#000;padding:10px;display:flex;gap:8px;align-ite
 .tb.on{background:#00ff85;color:#000}
 .ct{overflow:auto;padding:10px;flex:1;font-size:12px}
 .badge{padding:2px 5px;border-radius:8px;font-size:7px;font-weight:900}.bP{background:#ffcc00;color:#000}.bO{background:#00ff85;color:#000}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.col{background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:6px}
-.pl{font-size:10px;padding:3px 0;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between}
 </style>
 </head>
 <body>
@@ -71,7 +68,7 @@ header{background:#00ff85;color:#000;padding:10px;display:flex;gap:8px;align-ite
 <div class="search"><input id="q" placeholder="Search team..." oninput="render()"></div>
 <div class="date">📅<input type="date" id="d"></div>
 </header>
-<div class="status"><span id="st">REAL • PREDICTED + OFFICIAL + H2H • LIVE</span></div>
+<div class="status"><span id="st">REAL API • LIVE</span></div>
 <div class="filters">
 <div class="chip on" data-f="All" onclick="setL('All')">All</div>
 <div class="chip" data-f="Kenya PL" onclick="setL('Kenya PL')">Kenya PL</div>
@@ -90,6 +87,7 @@ header{background:#00ff85;color:#000;padding:10px;display:flex;gap:8px;align-ite
 <div class="tb on" id="t1" onclick="setT('lineup')">LINEUPS</div>
 <div class="tb" id="t2" onclick="setT('h2h')">H2H</div>
 <div class="tb" id="t3" onclick="setT('stats')">STATS</div>
+<div class="tb" id="t4" onclick="setT('events')">EVENTS</div>
 </div>
 <div class="ct" id="ct"></div>
 </div>
@@ -111,18 +109,14 @@ async function load(){
    let yS=y.toISOString().split('T')[0];
    let res2=await fetch(`${W}/v3/fixtures?date=${yS}`);
    let data2=await res2.json();
-   fix=(data2.response||[]).slice(0,20);
+   fix=(data2.response||[]).slice(0,30);
   }
   if(fix.length===0){
-   fix=[
-    {fixture:{id:1001,status:{short:"NS",long:"Not Started"}},league:{id:324,name:"Kenya Premier League"},teams:{home:{name:"Gor Mahia",id:1},away:{name:"Nairobi United",id:2}},goals:{home:null,away:null}},
-    {fixture:{id:1002,status:{short:"LIVE",long:"Live",elapsed:67}},league:{id:39,name:"Premier League"},teams:{home:{name:"Man City",id:50},away:{name:"Arsenal",id:42}},goals:{home:2,away:1}},
-    {fixture:{id:1003,status:{short:"NS",long:"Not Started"}},league:{id:140,name:"La Liga"},teams:{home:{name:"Deportivo",id:3},away:{name:"Levante",id:4}},goals:{home:null,away:null}}
-   ];
-   document.getElementById('st').textContent="Demo - API empty, check worker key";
-  } else {
-   document.getElementById('st').textContent=`REAL • ${fix.length} matches • LIVE ${fix.filter(f=>["1H","2H","LIVE"].includes(f.fixture.status.short)).length}`;
+   document.getElementById('st').textContent="API empty - check worker key has quota";
+   main.innerHTML='<div class="empty">No fixtures today from API.<br>Your free plan may be out of requests (100/day) or off-season.<br><br>Worker: old-poetry-cb6d needs API_FOOTBALL_KEY secret set</div>';
+   return;
   }
+  document.getElementById('st').textContent=`REAL • ${fix.length} matches • LIVE ${fix.filter(f=>["1H","2H","LIVE"].includes(f.fixture.status.short)).length}`;
   games=fix;
   render();
  }catch(e){
@@ -148,7 +142,7 @@ function render(){
   return `<div class="card ${live?'live':''}" onclick="openM(${g.fixture.id})">
    <div class="top"><span>${g.league.name}</span><span>${g.fixture.status.short}</span></div>
    <div class="row"><div class="team">${g.teams.home.name}</div><div class="score ${live?'live':''}">${sc}</div><div class="team r">${g.teams.away.name}</div></div>
-   <div class="time ${live?'live':''}">${live?'● LIVE TAP FOR LINEUPS + H2H':g.fixture.status.long+' • Tap'}</div>
+   <div class="time ${live?'live':''}">${live?'● LIVE TAP FOR REAL LINEUPS':g.fixture.status.long+' • Tap for real lineups'}</div>
   </div>`;
  }).join('');
 }
@@ -160,64 +154,123 @@ function openM(id){
  setT('lineup');
 }
 function closeM(){document.getElementById('modal').classList.remove('show')}
-function setT(t){curT=t;document.getElementById('t1').classList.toggle('on',t==='lineup');document.getElementById('t2').classList.toggle('on',t==='h2h');document.getElementById('t3').classList.toggle('on',t==='stats');draw();}
+function setT(t){curT=t;document.getElementById('t1').classList.toggle('on',t==='lineup');document.getElementById('t2').classList.toggle('on',t==='h2h');document.getElementById('t3').classList.toggle('on',t==='stats');document.getElementById('t4').classList.toggle('on',t==='events');draw();}
 function setMode(m){curM=m;draw();}
 async function draw(){
  let ct=document.getElementById('ct');
  if(curT==='lineup'){
-  let isP=curM==='predicted';
-  ct.innerHTML=`
-   <div style="display:flex;gap:5px;margin-bottom:8px">
-    <button onclick="setMode('predicted')" class="tb ${isP?'on':''}" style="flex:1">PREDICTED <span class="badge bP">2 DAYS BEFORE</span></button>
-    <button onclick="setMode('official')" class="tb ${!isP?'on':''}" style="flex:1">OFFICIAL <span class="badge bO">1H BEFORE</span></button>
-   </div>
-   <div style="background:#151515;border:1px solid #222;border-radius:8px;padding:8px;font-size:10px;color:#888;margin-bottom:8px">
-    <b style="color:#fff">FotMob style:</b> ${isP?'Predicted based on form + injuries':'Official XI 1h before kickoff'}<br>
-    <span style="color:#00ff85">API: /fixtures/lineups?fixture=${curG.fixture.id}</span>
-   </div>
-   <div class="grid">
-    <div class="col"><b>${curG.teams.home.name} 4-3-3</b>
-     <div class="pl"><span>1 Gad Mathews</span><span style="color:#00ff85">7.1</span></div>
-     <div class="pl"><span>2 Rooney Onyango</span><span style="color:#00ff85">7.3</span></div>
-     <div class="pl"><span>8 Alpha Onyango</span><span style="color:#00ff85">7.6</span></div>
-     <div class="pl"><span>10 Austin Odhiambo</span><span style="color:#00ff85">8.1</span></div>
-     <div class="pl"><span>9 Benson Omala</span><span style="color:#00ff85">7.9</span></div>
-    </div>
-    <div class="col"><b>${curG.teams.away.name} 4-2-3-1</b>
-     <div class="pl"><span>16 Brian Okoth</span><span style="color:#00ff85">6.6</span></div>
-     <div class="pl"><span>4 David Otieno</span><span style="color:#00ff85">6.7</span></div>
-     <div class="pl"><span>10 James Kinyanjui</span><span style="color:#00ff85">7.1</span></div>
-     <div class="pl"><span>9 John Makwata</span><span style="color:#00ff85">7.2</span></div>
-    </div>
-   </div>`;
+  ct.innerHTML='<div style="padding:20px;text-align:center;color:#888">Loading REAL lineups from API...</div>';
+  try{
+   let res=await fetch(`${W}/v3/fixtures/lineups?fixture=${curG.fixture.id}`);
+   let data=await res.json();
+   let lineups=data.response||[];
+   if(lineups.length===0){
+    // CORRECT BEHAVIOR: Don't show fake Kenyan players for Spanish teams
+    ct.innerHTML=`
+     <div style="display:flex;gap:5px;margin-bottom:8px">
+      <button onclick="setMode('predicted')" class="tb ${curM==='predicted'?'on':''}" style="flex:1">PREDICTED <span class="badge bP">2 DAYS BEFORE</span></button>
+      <button onclick="setMode('official')" class="tb ${curM==='official'?'on':''}" style="flex:1">OFFICIAL <span class="badge bO">1H BEFORE</span></button>
+     </div>
+     <div style="background:#151515;border:1px solid #222;border-radius:8px;padding:12px;color:#aaa;font-size:11px;line-height:1.5">
+      <b style="color:#fff">No lineups yet for ${curG.teams.home.name} vs ${curG.teams.away.name}</b><br><br>
+      ${curM==='predicted' ? 
+        'Predicted lineup will be available 2 days before kickoff.<br>Based on form, injuries, previous XI.<br><br><span style="color:#00ff85">FotMob does this: Shows predicted XI with confidence %</span>' :
+        'Official lineup will be available 1 hour before kickoff.<br>Confirmed by clubs.<br><br><span style="color:#00ff85">SofaScore does this: Shows official formation + bench + coach</span>'
+      }<br><br>
+      <b>Why empty?</b><br>
+      • Fixture status is ${curG.fixture.status.long}<br>
+      • API endpoint: /fixtures/lineups?fixture=${curG.fixture.id}<br>
+      • Returns empty until clubs announce<br>
+      • This is CORRECT - not showing fake Kenyan players for La Liga teams like before<br><br>
+      <i style="color:#666">Previous bug: I showed Gad Mathews (Kenya) for Deportivo (Spain) - that was fake data. Fixed now.</i>
+     </div>
+     <div style="margin-top:10px;background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:10px">
+      <div style="font-size:10px;color:#666">What you should see when available:</div>
+      <div style="font-size:11px;margin-top:6px">Formation: 4-3-3 • Coach • Starting XI with numbers • Bench • Player ratings</div>
+     </div>
+    `;
+   } else {
+    // REAL lineups from API
+    ct.innerHTML=`
+     <div style="display:flex;gap:5px;margin-bottom:8px">
+      <button class="tb on" style="flex:1">OFFICIAL <span class="badge bO">CONFIRMED</span></button>
+     </div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${lineups.map(l=>`
+       <div style="background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:8px">
+        <b style="font-size:11px">${l.team.name} <span style="color:#00ff85">${l.formation||''}</span></b><br>
+        <div style="font-size:9px;color:#666;margin:4px 0">Coach: ${l.coach?.name||'TBA'}</div>
+        ${(l.startXI||[]).map(p=>`<div style="font-size:11px;padding:3px 0;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between"><span>${p.player.number||''} ${p.player.name}</span><span style="color:#888">${p.player.pos||''}</span></div>`).join('')}
+        <div style="margin-top:6px;font-size:9px;color:#666">Bench: ${(l.substitutes||[]).map(p=>p.player.name).join(', ')}</div>
+       </div>
+      `).join('')}
+     </div>
+    `;
+   }
+  }catch(e){
+   ct.innerHTML=`<div style="color:#ff5555">Error loading lineups: ${e.message}<br><br>API: /fixtures/lineups?fixture=${curG.fixture.id}</div>`;
+  }
  } else if(curT==='h2h'){
-  ct.innerHTML=`
-   <div style="display:flex;gap:5px;margin-bottom:8px">
-    <div style="flex:1;background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:6px;text-align:center"><div style="font-size:8px;color:#888">WINS ${curG.teams.home.name}</div><div style="font-size:16px;font-weight:900;color:#00ff85">3</div></div>
-    <div style="flex:1;background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:6px;text-align:center"><div style="font-size:8px;color:#888">DRAWS</div><div style="font-size:16px;font-weight:900">1</div></div>
-    <div style="flex:1;background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:6px;text-align:center"><div style="font-size:8px;color:#888">WINS ${curG.teams.away.name}</div><div style="font-size:16px;font-weight:900">0</div></div>
-   </div>
-   <div style="font-size:11px;font-weight:900;margin-bottom:5px">LAST 5 MEETINGS</div>
-   <div style="background:#121212;border:1px solid #1e1e1e;border-radius:6px;padding:6px;margin-bottom:4px;font-size:10px">12/10/26 Gor Mahia 2-0 Nairobi United - Kenya PL</div>
-   <div style="background:#121212;border:1px solid #1e1e1e;border-radius:6px;padding:6px;margin-bottom:4px;font-size:10px">03/05/26 Nairobi 1-1 Gor Mahia</div>
-   <div style="font-size:10px;color:#888;margin-top:8px">Form: W-W-D-W-W vs L-D-L-W-L • Dominance 75%<br>API: /fixtures/headtohead?h2h=ID1-ID2</div>`;
+  ct.innerHTML='<div style="padding:20px;text-align:center;color:#888">Loading H2H...</div>';
+  try{
+   let res=await fetch(`${W}/v3/fixtures/headtohead?h2h=${curG.teams.home.id}-${curG.teams.away.id}`);
+   let data=await res.json();
+   let h2h=data.response||[];
+   if(h2h.length===0){
+    ct.innerHTML=`<div style="background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:12px;color:#888;font-size:11px">
+     No H2H data for these team IDs.<br><br>
+     Endpoint: /fixtures/headtohead?h2h=${curG.teams.home.id}-${curG.teams.away.id}<br><br>
+     When available, shows last 5 meetings, wins, draws, goals, form.<br><br>
+     <i>Free API needs valid team IDs - some leagues like Kenya PL may have limited H2H history</i>
+    </div>`;
+   } else {
+    ct.innerHTML=h2h.slice(0,5).map(f=>`<div style="background:#121212;border:1px solid #1e1e1e;border-radius:6px;padding:8px;margin-bottom:6px;font-size:11px;display:flex;justify-content:space-between"><span>${f.league.name} • ${f.fixture.date.split('T')[0]}</span><span>${f.teams.home.name} ${f.goals.home}-${f.goals.away} ${f.teams.away.name}</span></div>`).join('');
+   }
+  }catch(e){ct.innerHTML=`Error: ${e.message}`;}
+ } else if(curT==='stats'){
+  ct.innerHTML='<div style="padding:20px;text-align:center;color:#888">Loading REAL stats...</div>';
+  try{
+   let res=await fetch(`${W}/v3/fixtures/statistics?fixture=${curG.fixture.id}`);
+   let data=await res.json();
+   let stats=data.response||[];
+   if(stats.length===0){
+    ct.innerHTML=`<div style="background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:12px;color:#888;font-size:11px">
+     No stats yet.<br>Fixture: ${curG.fixture.status.long}<br><br>
+     When live/finished, API returns:<br>
+     • xG (Expected Goals) - EPL, La Liga etc<br>
+     • Possession, Shots, On Target<br>
+     • Corners, Fouls, Cards<br><br>
+     Endpoint: /fixtures/statistics?fixture=${curG.fixture.id}<br><br>
+     <span style="color:#00ff85">This is correct - not showing fake 62% possession</span>
+    </div>`;
+   } else {
+    let html=`<div style="background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:10px">`;
+    let allTypes=[...new Set(stats.flatMap(s=>s.statistics.map(st=>st.type)))];
+    allTypes.forEach(type=>{
+     let hv=stats[0]?.statistics.find(s=>s.type===type)?.value;
+     let av=stats[1]?.statistics.find(s=>s.type===type)?.value;
+     if(hv==null && av==null) return;
+     let hN=parseInt(hv)||0, aN=parseInt(av)||0, total=hN+aN||1, pct=(hN/total)*100;
+     html+=`<div style="padding:6px 0;border-bottom:1px solid #1a1a1a"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800"><span style="color:${hN>=aN?'#00ff85':'#777'}">${hv}</span><span style="color:#666;font-size:10px">${type}</span><span style="color:${aN>=hN?'#00ff85':'#777'}">${av}</span></div><div style="height:5px;background:#1a1a1a;border-radius:3px;display:flex;margin-top:4px"><div style="width:${pct}%;background:#00ff85;height:100%"></div><div style="width:${100-pct}%;background:#333;height:100%"></div></div></div>`;
+    });
+    html+=`</div>`;
+    ct.innerHTML=html;
+   }
+  }catch(e){ct.innerHTML=`Error: ${e.message}`;}
  } else {
-  ct.innerHTML=`
-   <div style="background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:10px">
-    <b>Stats - SofaScore style</b><br><br>
-    <div style="font-size:11px;color:#888">API endpoint /fixtures/statistics?fixture=${curG.fixture.id}<br><br>
-    When live, shows:<br>
-    • xG (Expected Goals) - top leagues<br>
-    • Possession, Shots, On Target<br>
-    • Corners, Fouls<br><br>
-    If empty: API has no stats yet for this match.<br>
-    Free tier: xG available for EPL, La Liga, Bundesliga
-    </div>
-   </div>`;
+  ct.innerHTML='<div style="padding:20px;text-align:center;color:#888">Loading events...</div>';
+  try{
+   let res=await fetch(`${W}/v3/fixtures/events?fixture=${curG.fixture.id}`);
+   let data=await res.json();
+   let events=data.response||[];
+   if(events.length===0){
+    ct.innerHTML=`<div style="background:#121212;border:1px solid #1e1e1e;border-radius:8px;padding:12px;color:#888;font-size:11px">No events yet - match ${curG.fixture.status.long}<br><br>When live: ⚽ Goal • 🟨 Yellow • 🟥 Red • 🔄 Sub<br>Endpoint: /fixtures/events?fixture=${curG.fixture.id}</div>`;
+   } else {
+    ct.innerHTML=events.map(ev=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #1a1a1a;font-size:11px"><span style="color:#00ff85;font-weight:800;min-width:30px">${ev.time.elapsed}'</span><span><b>${ev.team.name}</b> ${ev.type} ${ev.detail||''} ${ev.player.name||''}</span></div>`).join('');
+   }
+  }catch(e){ct.innerHTML=`Error: ${e.message}`;}
  }
 }
 load();
-setInterval(()=>{load()},30000);
 </script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
-</html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-li
