@@ -140,9 +140,235 @@ function setPage(p){curPage=p;document.querySelectorAll('.nav').forEach(n=>n.cla
 function loadNews(){var main=document.getElementById('main');var cached=getCache('jeScores_news');if(cached){renderNews(cached,main,true); fetchNews(main);}else{main.innerHTML='<div class="empty"><b>jeScores News</b><br>Loading...</div>';fetchNews(main);}}
 function fetchNews(main){var url='https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/sport/football/rss.xml';fetchDedup(url).then(d=>{var items=(d.items||[]).slice(0,20);setCache('jeScores_news',items);renderNews(items,main,false);}).catch(e=>{var cached=getCache('jeScores_news');if(cached) renderNews(cached,main,true);else main.innerHTML='<div class="empty"><b>News unavailable</b><br>Retry</div>';});}
 function renderNews(items,main,fromCache){var html=(fromCache?'<div style="text-align:center;font-size:8px;color:#555;padding:3px">Cached</div>':'');html+='<div style="padding:5px 0"><b style="color:var(--gold)">⚽ Football News</b><div style="font-size:9px;color:#888">From BBC Sport • Attributable</div></div>';items.forEach(it=>{html+='<div class="news-card" onclick="window.open(\''+it.link.replace(/'/g,"\\'")+'\',\'_blank\')"><img src="'+(it.enclosure?.link||'https://media.api-sports.io/football/leagues/39.png')+'"><div><div class="news-title">'+it.title+'</div><div class="news-meta">'+(it.pubDate||'')+' • BBC</div></div></div>';});document.getElementById('main').innerHTML=html;}
-function loadLeaguesHub(){var main=document.getElementById('main');main.innerHTML='<div class="empty"><b>Leagues</b><br>Loading...</div>';var cached=getCache('jeScores_leagues');if(cached){renderLeagues(cached,main); return;}fetchDedup(W+"/v3/leagues?current=true").then(d=>{var leagues=d.response||[];setCache('jeScores_leagues',leagues);renderLeagues(leagues,main);}).catch(e=>{main.innerHTML='<div class="empty">Error loading leagues</div>';});}
-function renderLeagues(leagues,main){var sorted=leagues.sort((a,b)=>{var pa=TOP5[a.league.id]||UEFA[a.league.id]||99;var pb=TOP5[b.league.id]||UEFA[b.league.id]||99;if(pa!=pb) return pa-pb;return a.league.name.localeCompare(b.league.name);});var html='<div style="padding:5px 0"><b style="color:var(--gold)">🏆 Leagues</b><div style="font-size:9px;color:#888">Top 5 + UEFA • Tap for standings</div></div>';sorted.slice(0,50).forEach(l=>{var prio=TOP5[l.league.id]?'<span class="prio">TOP 5</span>':'';html+='<div class="league-card"><div class="league-head" onclick="openLeague('+l.league.id+',\''+l.league.name.replace(/'/g,"\\'")+'\',\''+(l.country.name||'').replace(/'/g,"\\'")+'\')"><b>🏳️ '+(l.country.name||'World')+' - '+l.league.name+' '+prio+'</b><span style="color:var(--gold)">→</span></div></div>';});document.getElementById('main').innerHTML=html;}
-function openLeague(id,name,country){var main=document.getElementById('main');main.innerHTML='<div class="empty"><b>'+name+'</b><br>'+country+'<br>Loading...</div>';var season=new Date().getFullYear();if(new Date().getMonth()<7) season--;var kStand='jeScores_standings_'+id+'_'+season;var kTop='jeScores_topscorers_'+id+'_'+season;Promise.all([getCache(kStand)?Promise.resolve({response:getCache(kStand)}):fetchDedup(W+"/v3/standings?league="+id+"&season="+season).then(d=>{setCache(kStand,d.response||[]);return d;}),getCache(kTop)?Promise.resolve({response:getCache(kTop)}):fetchDedup(W+"/v3/players/topscorers?league="+id+"&season="+season).then(d=>{setCache(kTop,d.response||[]);return d;}).catch(()=>{return {response:[]};})]).then(([standData,topData])=>{var standings=(standData.response||[])[0]?.league?.standings?.[0]||[];var topScorers=topData.response||[];var html='<div class="league-card"><div class="league-head"><b>🏆 '+name+' • '+country+' • '+season+'/'+(season+1)+'</b><span onclick="loadLeaguesHub()" style="color:var(--gold);cursor:pointer">← Back</span></div></div>';html+='<div class="league-card" style="padding:10px"><b style="color:var(--gold)">Standings</b>';if(standings.length==0) html+='<div class="empty">No standings yet</div>';else{html+='<table class="standings-table"><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>Pts</th></tr>';standings.forEach(s=>{html+='<tr><td>'+s.rank+'</td><td style="font-weight:700">'+s.team.name+'</td><td>'+s.all.played+'</td><td>'+s.all.win+'</td><td>'+s.all.draw+'</td><td>'+s.all.lose+'</td><td style="font-weight:900;color:var(--gold)">'+s.points+'</td></tr>';});html+='</table>';}html+='</div>';if(topScorers.length>0){html+='<div class="league-card" style="padding:10px"><b style="color:var(--gold)">Top Scorers</b><table class="standings-table"><tr><th>Player</th><th>Team</th><th>Goals</th></tr>';topScorers.slice(0,10).forEach(p=>{html+='<tr><td style="font-weight:700">'+p.player.name+'</td><td>'+p.statistics[0].team.name+'</td><td style="color:var(--gold);font-weight:900">'+p.statistics[0].goals.total+'</td></tr>';});html+='</table></div>';}main.innerHTML=html;}).catch(e=>{main.innerHTML='<div class="empty">Error<br>'+e.message+'</div>';});}
+var curLeague=null;var curLeagueTab='standings';var curLeagueSeason=0;
+function loadLeaguesHub(){
+ var main=document.getElementById('main');
+ main.innerHTML='<div class="empty"><b>🏆 Leagues • jeScores</b><br>Loading competitions...<br><span style="font-size:10px">Every Goal. Every Update.</span></div>';
+ var cached=getCache('jeScores_leagues');
+ if(cached){renderLeagues(cached,main); return;}
+ fetchDedup(W+"/v3/leagues?current=true").then(d=>{
+  var leagues=d.response||[];
+  // filter only type league/cup and current
+  setCache('jeScores_leagues',leagues);
+  renderLeagues(leagues,main);
+ }).catch(e=>{
+  var c=getCache('jeScores_leagues');
+  if(c) renderLeagues(c,main);
+  else main.innerHTML='<div class="empty"><b>Error loading leagues</b><br>'+e.message+'<br><button class="btn btnGold" onclick="loadLeaguesHub()">Retry</button></div>';
+ });
+}
+function renderLeagues(leagues,main){
+ // Build priority list
+ var sorted=leagues.sort((a,b)=>{
+  var pa=TOP5[a.league.id]||UEFA[a.league.id]||99;
+  var pb=TOP5[b.league.id]||UEFA[b.league.id]||99;
+  if(pa!=pb) return pa-pb;
+  return a.league.name.localeCompare(b.league.name);
+ });
+ // Keep top + important others
+ var top6=[39,140,135,78,61,2]; // EPL LaLiga SerieA Bundesliga Ligue1 UCL
+ var topLeagues=sorted.filter(l=>top6.indexOf(l.league.id)>-1);
+ var otherLeagues=sorted.filter(l=>top6.indexOf(l.league.id)==-1);
+ var html='<div style="padding:6px 0"><b style="color:var(--gold)">🏆 Leagues • jeScores</b><div style="font-size:9px;color:#888">Top 5 + UCL prioritized • Real API data • Tap to open</div></div>';
+ html+='<div style="padding:4px 0"><b style="color:var(--gold);font-size:11px">★ Top Competitions</b></div>';
+ topLeagues.forEach(l=>{
+  var prio=TOP5[l.league.id]?'<span class="prio">TOP 5</span>':(l.league.id==2?'<span class="prio" style="background:#1e3d8f;color:#fff">UCL</span>':'');
+  var logo='https://media.api-sports.io/football/leagues/'+l.league.id+'.png';
+  html+='<div class="league-card"><div class="league-head" onclick="openLeague('+l.league.id+',\''+l.league.name.replace(/'/g,"\\'")+'\',\''+(l.country.name||'World').replace(/'/g,"\\'")+'\','+(JSON.stringify(l.seasons||[]).replace(/'/g,"\\'")+')"><div style="display:flex;align-items:center;gap:8px"><img src="'+logo+'" style="width:22px;height:22px;object-fit:contain" onerror="this.style.display=\'none\'"><b>🏳️ '+(l.country.name||'World')+' - '+l.league.name+' '+prio+'</b></div><span style="color:var(--gold)">→</span></div></div>';
+ });
+ html+='<div style="padding:8px 0 4px"><b style="font-size:11px;color:#aaa">Other Leagues & Cups</b> <span style="font-size:9px;color:#666">('+otherLeagues.length+')</span></div>';
+ otherLeagues.slice(0,100).forEach(l=>{
+  var logo='https://media.api-sports.io/football/leagues/'+l.league.id+'.png';
+  html+='<div class="league-card"><div class="league-head" onclick="openLeague('+l.league.id+',\''+l.league.name.replace(/'/g,"\\'")+'\',\''+(l.country.name||'World').replace(/'/g,"\\'")+'\','+(JSON.stringify(l.seasons||[]).replace(/'/g,"\\'")+')"><div style="display:flex;align-items:center;gap:8px"><img src="'+logo+'" style="width:20px;height:20px;object-fit:contain" onerror="this.style.display=\'none\'"><b style="font-size:11px">🏳️ '+(l.country.name||'World')+' - '+l.league.name+'</b></div><span style="color:var(--muted);font-size:10px">→</span></div></div>';
+ });
+ document.getElementById('main').innerHTML=html;
+}
+function openLeague(id,name,country,seasons){
+ curLeague={id:id,name:name,country:country,seasons:seasons||[]};
+ // determine season
+ var defaultSeason=new Date().getFullYear(); if(new Date().getMonth()<7) defaultSeason--;
+ if(seasons && seasons.length>0){
+  // pick most recent season that is covered and current or last
+  var sortedSeasons=seasons.slice().sort((a,b)=>b.year-a.year);
+  defaultSeason=sortedSeasons[0].year;
+  // if current year season not in list, pick latest
+  if(!seasons.find(s=>s.year==defaultSeason)) defaultSeason=sortedSeasons[0].year;
+ }
+ curLeagueSeason=defaultSeason;
+ curLeagueTab='standings';
+ renderLeagueScreen();
+}
+function renderLeagueScreen(){
+ if(!curLeague) return;
+ var main=document.getElementById('main');
+ var seasons=curLeague.seasons||[];
+ var seasonOptions='';
+ if(seasons.length>0){
+  seasons.slice().sort((a,b)=>b.year-a.year).slice(0,8).forEach(s=>{
+   seasonOptions+='<option value="'+s.year+'" '+(s.year==curLeagueSeason?'selected':'')+'>'+s.year+'/'+(s.year+1)+'</option>';
+  });
+ } else {
+  var y=new Date().getFullYear(); for(var i=0;i<5;i++){var yr=y-i; seasonOptions+='<option value="'+yr+'" '+(yr==curLeagueSeason?'selected':'')+'>'+yr+'/'+(yr+1)+'</option>';}
+ }
+ var logo='https://media.api-sports.io/football/leagues/'+curLeague.id+'.png';
+ var html='<div class="league-card"><div class="league-head" style="flex-direction:column;align-items:stretch;gap:6px">';
+ html+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%"><div style="display:flex;align-items:center;gap:8px"><img src="'+logo+'" style="width:26px;height:26px" onerror="this.style.display=\'none\'"><b>🏆 '+curLeague.name+' • '+curLeague.country+'</b></div><span onclick="loadLeaguesHub()" style="color:var(--gold);cursor:pointer;background:#000;border:1px solid var(--border);border-radius:12px;padding:3px 8px;font-size:10px">← Back</span></div>';
+ html+='<div style="display:flex;gap:8px;align-items:center"><span style="font-size:10px;color:#888">Season:</span><select id="seasonSel" onchange="changeSeason(this.value)" style="background:#000;color:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:11px">'+seasonOptions+'</select><span style="font-size:8px;color:#555">API: '+curLeagueSeason+'</span></div>';
+ html+='</div></div>';
+ html+='<div style="display:flex;gap:4px;padding:6px 0;overflow:auto;position:sticky;top:61px;background:var(--dark);z-index:5">';
+ var tabs=[['standings','Standings'],['fixtures','Fixtures'],['results','Results'],['scorers','Top Scorers'],['assists','Assists']];
+ tabs.forEach(t=>{
+  html+='<div class="tb '+(curLeagueTab==t[0]?'on':'')+'" onclick="switchLeagueTab(\''+t[0]+'\')" style="min-width:70px">'+t[1]+'</div>';
+ });
+ html+='</div>';
+ html+='<div id="leagueContent"><div class="empty">Loading '+curLeagueTab+'...</div></div>';
+ main.innerHTML=html;
+ loadLeagueTabData();
+}
+function changeSeason(y){curLeagueSeason=parseInt(y); renderLeagueScreen();}
+function switchLeagueTab(tab){curLeagueTab=tab; renderLeagueScreen();}
+function loadLeagueTabData(){
+ var container=document.getElementById('leagueContent');
+ if(!container) return;
+ if(curLeagueTab=='standings') loadLeagueStandings(container);
+ else if(curLeagueTab=='fixtures') loadLeagueFixtures(container,false);
+ else if(curLeagueTab=='results') loadLeagueFixtures(container,true);
+ else if(curLeagueTab=='scorers') loadLeagueTopScorers(container,false);
+ else if(curLeagueTab=='assists') loadLeagueTopScorers(container,true);
+}
+function loadLeagueStandings(container){
+ var k='jeScores_standings_'+curLeague.id+'_'+curLeagueSeason;
+ var cached=getCache(k);
+ if(cached){renderLeagueStandings(cached,container,true); if(cacheAge(k)>60000) fetchLeagueStandings(k,container);}
+ else {container.innerHTML='<div class="empty">Loading standings...<br><span style="font-size:10px">Real data from API-Football</span></div>'; fetchLeagueStandings(k,container);}
+}
+function fetchLeagueStandings(k,container){
+ fetchDedup(W+"/v3/standings?league="+curLeague.id+"&season="+curLeagueSeason).then(d=>{
+  setCache(k,d.response||[]);
+  renderLeagueStandings(d.response||[],container,false);
+ }).catch(e=>{
+  var c=getCache(k);
+  if(c) renderLeagueStandings(c,container,true);
+  else container.innerHTML='<div class="empty"><b>No standings available</b><br>This competition may not have a league table (cup format) or data not yet available for '+curLeagueSeason+'<br><br>Error: '+e.message+'<br><button class="btn btnGold" onclick="loadLeagueTabData()">Retry</button></div>';
+ });
+}
+function renderLeagueStandings(data,container,fromCache){
+ var standings=(data||[])[0]?.league?.standings;
+ var table=null;
+ if(standings && standings.length>0){
+  // Some leagues have multiple groups, pick first or combine? Show first group by default, but show all groups if >1
+  table=standings[0];
+  // If multiple groups (like UCL groups), show all
+  if(standings.length>1){
+   var html=(fromCache?'<div style="text-align:center;font-size:8px;color:#555;padding:3px">Cached • Updating</div>':'');
+   html+='<div style="padding:4px 0"><b style="color:var(--gold);font-size:11px">Standings • '+curLeague.name+' • '+curLeagueSeason+'/'+(curLeagueSeason+1)+'</b> <span style="font-size:9px;color:#666">'+(fromCache?'cached':'live')+'</span></div>';
+   standings.forEach((group,gi)=>{
+    html+='<div class="league-card" style="padding:8px;margin-bottom:10px"><b style="color:var(--gold);font-size:10px">Group '+(group[0]?.group||String.fromCharCode(65+gi))+'</b><div style="overflow:auto"><table class="standings-table"><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Form</th></tr>';
+    group.forEach(s=>{
+     var formHtml=(s.form||'').split('').slice(-5).map(f=>{var c=f=='W'?'#2ecc71':f=='D'?'#888':f=='L'?'#ff3b30':'#555';return '<span style="background:'+c+';color:#000;border-radius:3px;padding:1px 3px;font-size:8px;margin:1px">'+f+'</span>';}).join('');
+     html+='<tr><td>'+s.rank+'</td><td><div style="display:flex;align-items:center;gap:5px"><img src="https://media.api-sports.io/football/teams/'+s.team.id+'.png" style="width:16px;height:16px" onerror="this.style.display=\'none\'"><span style="font-weight:700">'+s.team.name+'</span></div></td><td>'+s.all.played+'</td><td>'+s.all.win+'</td><td>'+s.all.draw+'</td><td>'+s.all.lose+'</td><td>'+s.all.goals.for+'</td><td>'+s.all.goals.against+'</td><td>'+s.goalsDiff+'</td><td style="font-weight:900;color:var(--gold)">'+s.points+'</td><td>'+formHtml+'</td></tr>';
+    });
+    html+='</table></div></div>';
+   });
+   container.innerHTML=html;
+   return;
+  }
+ }
+ if(!table || table.length==0){
+  // Check if data is empty but we have standings in other format?
+  container.innerHTML='<div class="empty"><b>No standings for this season</b><br>'+curLeague.name+' • '+curLeagueSeason+'<br><br>This may be a cup competition or season not started yet.<br>Try another season or check Fixtures tab.</div>';
+  return;
+ }
+ var html=(fromCache?'<div style="text-align:center;font-size:8px;color:#555;padding:3px">Cached • Updating</div>':'');
+ html+='<div style="padding:4px 0"><b style="color:var(--gold);font-size:11px">Standings • '+curLeague.name+' • '+curLeagueSeason+'/'+(curLeagueSeason+1)+'</b> <span style="font-size:9px;color:#666">'+(fromCache?'cached':'live')+'</span></div>';
+ html+='<div class="league-card" style="padding:0;overflow:hidden"><div style="overflow:auto"><table class="standings-table" style="min-width:500px"><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Form</th></tr>';
+ table.forEach(s=>{
+  var desc=''; var descColor='#555';
+  if(s.description){ if(s.description.toLowerCase().indexOf('champions')>-1) descColor='#2ecc71'; else if(s.description.toLowerCase().indexOf('europa')>-1) descColor='#f39c12'; else if(s.description.toLowerCase().indexOf('relegation')>-1) descColor='#ff3b30'; desc='<div style="font-size:7px;color:'+descColor+'">'+s.description+'</div>'; }
+  var formHtml=(s.form||'').split('').slice(-5).map(f=>{var c=f=='W'?'#2ecc71':f=='D'?'#888':f=='L'?'#ff3b30':'#555';return '<span style="background:'+c+';color:#000;border-radius:3px;padding:1px 3px;font-size:8px;margin:1px;display:inline-block;min-width:10px;text-align:center">'+f+'</span>';}).join('');
+  html+='<tr><td>'+s.rank+'</td><td><div style="display:flex;align-items:center;gap:5px"><img src="https://media.api-sports.io/football/teams/'+s.team.id+'.png" style="width:16px;height:16px;object-fit:contain" onerror="this.style.display=\'none\'"><div><span style="font-weight:700">'+s.team.name+'</span>'+desc+'</div></div></td><td>'+s.all.played+'</td><td>'+s.all.win+'</td><td>'+s.all.draw+'</td><td>'+s.all.lose+'</td><td>'+s.all.goals.for+'</td><td>'+s.all.goals.against+'</td><td>'+(s.goalsDiff>0?'+'+s.goalsDiff:s.goalsDiff)+'</td><td style="font-weight:900;color:var(--gold)">'+s.points+'</td><td><div style="display:flex;gap:1px">'+formHtml+'</div></td></tr>';
+ });
+ html+='</table></div></div><div style="font-size:8px;color:#666;padding:6px">Swipe table horizontally • GF=Goals For GA=Against GD=Difference • Colors: Green=UCL qualification, Orange=Europa, Red=Relegation (when provider supplies description)</div>';
+ container.innerHTML=html;
+}
+function loadLeagueFixtures(container,isResults){
+ var type=isResults?'results':'fixtures';
+ var k='jeScores_league_'+type+'_'+curLeague.id+'_'+curLeagueSeason;
+ var cached=getCache(k);
+ if(cached){renderLeagueFixtures(cached,container,isResults,true); if(cacheAge(k)>120000) fetchLeagueFixtures(k,container,isResults);}
+ else {container.innerHTML='<div class="empty">Loading '+type+'...<br>Real fixtures from API</div>'; fetchLeagueFixtures(k,container,isResults);}
+}
+function fetchLeagueFixtures(k,container,isResults){
+ fetchDedup(W+"/v3/fixtures?league="+curLeague.id+"&season="+curLeagueSeason).then(d=>{
+  setCache(k,d.response||[]);
+  renderLeagueFixtures(d.response||[],container,isResults,false);
+ }).catch(e=>{
+  var c=getCache(k);
+  if(c) renderLeagueFixtures(c,container,isResults,true);
+  else container.innerHTML='<div class="empty"><b>Error loading fixtures</b><br>'+e.message+'<br><button class="btn btnGold" onclick="loadLeagueTabData()">Retry</button></div>';
+ });
+}
+function renderLeagueFixtures(fixtures,container,isResults,fromCache){
+ var list=fixtures;
+ if(isResults) list=list.filter(g=>['FT','AET','PEN','AWD','WO'].indexOf(g.fixture.status.short)>-1);
+ else list=list.filter(g=>['NS','TBD','1H','2H','HT','LIVE','ET','BT','P','SUSP','INT'].indexOf(g.fixture.status.short)>-1);
+ // sort
+ list.sort((a,b)=> isResults? new Date(b.fixture.date)-new Date(a.fixture.date) : new Date(a.fixture.date)-new Date(b.fixture.date));
+ if(list.length==0){
+  container.innerHTML='<div class="empty"><b>No '+(isResults?'results':'upcoming fixtures')+' for '+curLeagueSeason+'</b><br>Try other tab or season</div>';
+  return;
+ }
+ var html=(fromCache?'<div style="text-align:center;font-size:8px;color:#555;padding:3px">Cached • Updating</div>':'');
+ html+='<div style="padding:4px 0"><b style="color:var(--gold);font-size:11px">'+(isResults?'Results':'Upcoming Fixtures')+' • '+curLeague.name+' • '+curLeagueSeason+'</b> <span style="font-size:9px;color:#666">'+list.length+' matches</span></div>';
+ // group by date
+ var byDate={};
+ list.forEach(g=>{var d=new Date(g.fixture.date).toDateString(); if(!byDate[d]) byDate[d]=[]; byDate[d].push(g);});
+ Object.keys(byDate).forEach(dateStr=>{
+  html+='<div class="league-card"><div class="league-head" style="background:#0a0a0a"><b style="font-size:10px;color:#aaa">'+dateStr+'</b><span style="font-size:9px;color:#666">'+byDate[dateStr].length+' matches</span></div>';
+  byDate[dateStr].forEach(g=>{
+   // inject into global games for match centre
+   if(!games.find(x=>x.fixture.id==g.fixture.id)) games.push(g);
+   html+=matchRow(g);
+  });
+  html+='</div>';
+ });
+ container.innerHTML=html;
+}
+function loadLeagueTopScorers(container,isAssists){
+ var type=isAssists?'topassists':'topscorers';
+ var k='jeScores_league_'+type+'_'+curLeague.id+'_'+curLeagueSeason;
+ var cached=getCache(k);
+ if(cached){renderLeagueTop(cached,container,isAssists,true); if(cacheAge(k)>3600000) fetchLeagueTop(k,container,isAssists);}
+ else {container.innerHTML='<div class="empty">Loading '+(isAssists?'assists':'top scorers')+'...</div>'; fetchLeagueTop(k,container,isAssists);}
+}
+function fetchLeagueTop(k,container,isAssists){
+ var endpoint=isAssists?'players/topassists':'players/topscorers';
+ fetchDedup(W+"/v3/"+endpoint+"?league="+curLeague.id+"&season="+curLeagueSeason).then(d=>{
+  setCache(k,d.response||[]);
+  renderLeagueTop(d.response||[],container,isAssists,false);
+ }).catch(e=>{
+  var c=getCache(k);
+  if(c) renderLeagueTop(c,container,isAssists,true);
+  else container.innerHTML='<div class="empty"><b>No '+(isAssists?'assist':'scorer')+' data</b><br>Provider may not support for this league/season<br>'+e.message+'</div>';
+ });
+}
+function renderLeagueTop(data,container,isAssists,fromCache){
+ if(!data || data.length==0){container.innerHTML='<div class="empty"><b>No '+(isAssists?'assist':'scorer')+' data available</b><br>'+curLeague.name+' • '+curLeagueSeason+'<br>Try another season</div>'; return;}
+ var html=(fromCache?'<div style="text-align:center;font-size:8px;color:#555;padding:3px">Cached</div>':'');
+ html+='<div style="padding:4px 0"><b style="color:var(--gold);font-size:11px">'+(isAssists?'Top Assists':'Top Scorers')+' • '+curLeague.name+' • '+curLeagueSeason+'</b></div>';
+ html+='<div class="league-card" style="padding:0"><table class="standings-table"><tr><th>#</th><th>Player</th><th>Team</th><th>'+(isAssists?'A':'G')+'</th><th>'+(isAssists?'G+A':'A')+'</th></tr>';
+ data.slice(0,20).forEach((p,i)=>{
+  var stat=p.statistics[0];
+  var goals=stat.goals.total||0;
+  var assists=stat.goals.assists||0;
+  var mainVal=isAssists?assists:goals;
+  var secondVal=isAssists?goals:assists;
+  html+='<tr><td>'+(i+1)+'</td><td><div style="display:flex;align-items:center;gap:6px"><img src="'+(p.player.photo||'https://media.api-sports.io/football/teams/'+stat.team.id+'.png')+'" style="width:20px;height:20px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'"><span style="font-weight:700">'+p.player.name+'</span></div><div style="font-size:8px;color:#888">'+(p.player.nationality||'')+' • '+(p.player.age||'')+'y</div></td><td><div style="display:flex;align-items:center;gap:4px"><img src="https://media.api-sports.io/football/teams/'+stat.team.id+'.png" style="width:14px;height:14px" onerror="this.style.display=\'none\'"><span style="font-size:10px">'+stat.team.name+'</span></div></td><td style="font-weight:900;color:var(--gold)">'+mainVal+'</td><td style="color:#aaa">'+secondVal+'</td></tr>';
+ });
+ html+='</table></div><div style="font-size:8px;color:#666;padding:6px">G=Goals A=Assists • Real data from API-Football • Tap player row for profile (coming soon)</div>';
+ container.innerHTML=html;
+}
+
 function loadFollowingPage(){var main=document.getElementById('main');var favTeams=JSON.parse(localStorage.getItem('jeScores_fav')||'[]');if(favTeams.length==0){main.innerHTML='<div class="empty"><b>⭐ Following</b><br>No teams followed<br><br><button class="btn btnGold" onclick="setPage(\'matches\')">Browse Matches</button></div>';return;}var html='<div style="padding:5px 0"><b style="color:var(--gold)">⭐ Following • '+favTeams.length+' teams</b></div>';html+='<div class="league-card" style="padding:10px"><div style="font-size:11px">'+favTeams.map(t=>'<span style="background:#1a1a1a;border:1px solid var(--border);border-radius:12px;padding:3px 8px;margin:2px;display:inline-block">'+t+' <span style="color:var(--gold);cursor:pointer" onclick="followTeam(\''+t.replace(/'/g,"\\'")+'\')">×</span></span>').join('')+'</div></div>';var filtered=games.filter(g=>favTeams.indexOf(g.teams.home.name)>-1||favTeams.indexOf(g.teams.away.name)>-1);if(filtered.length>0){html+='<div class="league-card"><div class="league-head"><b>Matches for Following</b></div>';filtered.forEach(g=>{html+=matchRow(g);});html+='</div>';}html+='<div style="text-align:center;margin-top:10px"><button class="btn" onclick="clearFollowing()">Clear All</button></div>';main.innerHTML=html;}
 function clearFollowing(){localStorage.removeItem('jeScores_fav');loadFollowingPage();}
 function loadMorePage(){var main=document.getElementById('main');var html='<div style="padding:5px 0"><b style="color:var(--gold)">☰ More • jeScores</b><div style="font-size:9px;color:#888">Every Goal. Every Update.</div></div>';html+='<div class="league-card"><div class="league-head" onclick="loadTopScorersHub()"><b>⚽ Top Scorers - Top 5</b><span style="color:var(--gold)">→</span></div></div>';html+='<div class="league-card"><div class="league-head"><b>📱 jeScores v2.0 ELITE</b></div><div style="padding:10px;font-size:11px;color:#888">Every Goal. Every Update.<br><br>Data: API-Football via secure proxy (key hidden)<br>News: BBC Sport RSS<br><br>Top 5: EPL, La Liga, Serie A, Bundesliga, Ligue 1 prioritized<br><br>Features: Live scores, Goal scorers with minute + assist, Lineups real, Stats, Events, H2H, News, Standings, Following persistent<br><br>Speed: Cached instantly, stale-while-revalidate, deduped, live 30s refresh<br><br>No fake data<br><br>© jeScores by JESSENDINHO</div></div>';html+='<div class="league-card"><div class="league-head" onclick="if(confirm(\'Clear cache?\')){localStorage.clear();alert(\'Cleared\');}"><b>🗑️ Clear Cache</b><span>→</span></div></div>';main.innerHTML=html;}
