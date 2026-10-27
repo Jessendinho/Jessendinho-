@@ -166,29 +166,53 @@ function buildDateTabs(){var el=document.getElementById('dateTabs');var html='';
 function setDateOffset(o){var d=new Date();d.setDate(d.getDate()+o);curDate=d;document.getElementById('datePicker').valueAsDate=d;buildDateTabs();loadMatches(true);}
 function pickDate(){document.getElementById('datePicker').showPicker();}
 document.getElementById('datePicker').addEventListener('change',function(){curDate=this.valueAsDate||new Date();buildDateTabs();loadMatches(true);});
-function loadMatches(forceFresh){var dateStr=curDate.toISOString().split('T')[0];var cacheKey='jeScores_fixtures_'+dateStr;var cached=getCache(cacheKey);if(cached && !forceFresh){games=cached;renderMatches(true);if(cacheAge(cacheKey)>60000 || dateStr==new Date().toISOString().split('T')[0]){fetchFresh(dateStr,cacheKey);}return;}document.getElementById('main').innerHTML='<div class="empty"><b>jeScores</b><br>Loading matches...<br>Every Goal. Every Update.</div>';fetchFresh(dateStr,cacheKey);}
-function fetchFresh(dateStr,cacheKey){var url=W+"/v3/fixtures?date="+dateStr;fetchDedup(url).then(data=>{var fix=data.response||[];games=fix;setCache(cacheKey,fix);renderMatches(false);fetchGoalScorers(fix);}).catch(e=>{var cached=getCache(cacheKey);if(cached){games=cached;renderMatches(true);}else document.getElementById('main').innerHTML='<div class="empty"><b>Error</b><br>'+e.message+'<br><button class="btn btnGold" onclick="loadMatches(true)">Retry</button></div>';});}
+function loadMatches(forceFresh){var dateStr=curDate.toISOString().split('T')[0];var cacheKey='jeScores_fixtures_'+dateStr;var cached=getCache(cacheKey);if(cached && !forceFresh){games=cached;renderMatches(true);syncOpenMatch();if(cacheAge(cacheKey)>60000 || dateStr==new Date().toISOString().split('T')[0]){fetchFresh(dateStr,cacheKey);}return;}document.getElementById('main').innerHTML='<div class="empty"><b>jeScores</b><br>Loading matches...<br>Every Goal. Every Update.</div>';fetchFresh(dateStr,cacheKey);}
+function fetchFresh(dateStr,cacheKey){
+  var url=W+"/v3/fixtures?date="+dateStr;
+  fetchDedup(url).then(function(data){
+    var fix=data.response||[];
+    games=fix;
+    setCache(cacheKey,fix);
+    renderMatches(false);
+    syncOpenMatch();
+    fetchGoalScorers(fix);
+  }).catch(function(e){
+    var cached=getCache(cacheKey);
+    if(cached){games=cached;renderMatches(true);syncOpenMatch();}
+    else document.getElementById('main').innerHTML='<div class="empty"><b>Error</b><br>'+e.message+'<br><button class="btn btnGold" onclick="loadMatches(true)">Retry</button></div>';
+  });
+}
+
+/* Fetch events for every live match first. Previously, slicing the combined
+   list to 15 could exclude live games that appeared later in the API response. */
 function fetchGoalScorers(fix){
-  var liveStatus = ['1H','2H','HT','ET','BT','P','LIVE'];
-  var top = fix.filter(function(g){
-    var live = liveStatus.indexOf(g.fixture.status.short) > -1;
-    return live || TOP5[g.league.id] || UEFA[g.league.id];
-  }).slice(0, 15);
-  top.forEach(function(g){
-    var live = liveStatus.indexOf(g.fixture.status.short) > -1;
-    var k = 'jeScores_events_' + g.fixture.id;
-    var ttl = live ? 60000 : 86400000;
-    if (cacheAge(k) < ttl) return;
-    fetchDedup(W + "/v3/fixtures/events?fixture=" + g.fixture.id)
-      .then(function(d){
-        setCache(k, d.response || []);
-        queueRender();
-        if (curMatch && curMatch.fixture.id == g.fixture.id && curTab == 'events'){
-          var cont = document.getElementById('dContent');
-          if (cont) renderEvents(getCache(k) || [], cont);
+  var liveStatus=['1H','2H','HT','ET','BT','P','LIVE'];
+  var live=fix.filter(function(g){return liveStatus.indexOf(g.fixture.status.short)>-1;});
+  var priorityFinished=fix.filter(function(g){
+    var status=g.fixture.status.short;
+    var finished=['FT','AET','PEN','AWD','WO'].indexOf(status)>-1;
+    return finished && (TOP5[g.league.id] || UEFA[g.league.id]);
+  });
+  /* Live fixtures first; add important completed fixtures for final scorers. */
+  var targets=live.concat(priorityFinished);
+  targets.forEach(function(g){
+    var status=g.fixture.status.short;
+    var isLive=liveStatus.indexOf(status)>-1;
+    var k='jeScores_events_'+g.fixture.id;
+    var ttl=isLive?45000:86400000;
+    if(cacheAge(k)<ttl) return;
+    fetchDedup(W+'/v3/fixtures/events?fixture='+g.fixture.id).then(function(d){
+      setCache(k,d.response||[]);
+      queueRender();
+      if(curMatch && curMatch.fixture.id==g.fixture.id){
+        if(curTab=='events'){
+          var cont=document.getElementById('dContent');
+          if(cont) renderEvents(getCache(k)||[],cont);
+        } else if(curTab=='overview'){
+          setTab('overview');
         }
-      })
-      .catch(function(){});
+      }
+    }).catch(function(){});
   });
 }
 function renderMatches(fromCache){if(curPage!='matches') return;var q=document.getElementById('q').value.toLowerCase();var list=games;if(q) list=list.filter(g=>(g.teams.home.name+g.teams.away.name+g.league.name+g.league.country).toLowerCase().indexOf(q)>-1);var liveCount=list.filter(g=>['1H','2H','HT','ET','BT','P','LIVE'].indexOf(g.fixture.status.short)>-1).length;document.getElementById('liveCount').textContent=liveCount>0?liveCount+' LIVE':'0 LIVE';document.getElementById('liveCount').style.background=liveCount>0?'var(--gold)':'#222';document.getElementById('liveCount').style.color=liveCount>0?'#000':'#666';var groups={};list.forEach(g=>{var id=g.league.id;if(!groups[id]) groups[id]={league:g.league,games:[],prio:TOP5[id]||UEFA[id]||99};groups[id].games.push(g);});var sorted=Object.values(groups).sort((a,b)=>{if(a.prio!=b.prio) return a.prio-b.prio;return a.league.name.localeCompare(b.league.name);});var favTeams=JSON.parse(localStorage.getItem('jeScores_fav')||'[]');var followingGames=list.filter(g=>favTeams.indexOf(g.teams.home.name)>-1||favTeams.indexOf(g.teams.away.name)>-1);var html='';if(fromCache) html+='<div style="text-align:center;font-size:8px;color:#555;padding:3px">Cached • Updating • Every Goal. Every Update.</div>';if(followingGames.length>0 && !q){html+='<div class="following-card"><div class="following-head"><b>⭐ Following ('+followingGames.length+')</b></div>';followingGames.forEach(g=>{html+=matchRow(g);});html+='</div>';}sorted.forEach(group=>{var isCollapsed=collapsed[group.league.id];var prioLabel=group.prio<=5?'<span class="prio">TOP 5</span>':'';html+='<div class="league-card"><div class="league-head" onclick="toggleLeague('+group.league.id+')"><b>🏳️ '+group.league.country+' - '+group.league.name+' <span>('+group.games.length+')</span> '+prioLabel+'</b><span>⌃</span></div>';if(!isCollapsed){group.games.sort((a,b)=>{var liveA=['1H','2H','HT','LIVE'].indexOf(a.fixture.status.short)>-1;var liveB=['1H','2H','HT','LIVE'].indexOf(b.fixture.status.short)>-1;if(liveA!=liveB) return liveB-liveA;return new Date(a.fixture.date)-new Date(b.fixture.date);}).forEach(g=>{html+=matchRow(g);});}html+='</div>';});if(!html || (sorted.length==0 && followingGames.length==0)) html='<div class="empty"><b>No matches</b><br>'+curDate.toDateString()+'<br><br>Try another date</div>';document.getElementById('main').innerHTML=html;}
@@ -200,6 +224,20 @@ function onSearch(){
   searchTimer = setTimeout(function(){ renderMatches(true); }, 150);
 }
 function openDetail(id){curMatch=games.find(x=>x.fixture.id==id);if(!curMatch) return;document.getElementById('dTitle').innerHTML=curMatch.teams.home.name+' vs '+curMatch.teams.away.name+' • <span style="color:var(--gold)">jeScores</span>';var homeLogo='https://media.api-sports.io/football/teams/'+curMatch.teams.home.id+'.png';var awayLogo='https://media.api-sports.io/football/teams/'+curMatch.teams.away.id+'.png';var score=(curMatch.goals.home!=null?curMatch.goals.home:'-')+' - '+(curMatch.goals.away!=null?curMatch.goals.away:'-');if(curMatch.fixture.status.short=='NS') score='vs';document.getElementById('scoreboard').innerHTML='<div class="teams"><div class="tbox"><img src="'+homeLogo+'" onerror="this.style.display=\'none\'"><div>'+curMatch.teams.home.name+'</div><button class="btn btnGold" style="margin-top:5px" onclick="followTeam(\''+curMatch.teams.home.name.replace(/'/g,"\\'")+'\')">⭐ Follow</button></div><div class="sbox">'+score+'<div style="font-size:9px;font-weight:400;color:#888;margin-top:3px">'+curMatch.fixture.status.long+(curMatch.fixture.status.elapsed?' • '+curMatch.fixture.status.elapsed+'\'':'')+'</div></div><div class="tbox"><img src="'+awayLogo+'" onerror="this.style.display=\'none\'"><div>'+curMatch.teams.away.name+'</div><button class="btn btnGold" style="margin-top:5px" onclick="followTeam(\''+curMatch.teams.away.name.replace(/'/g,"\\'")+'\')">⭐ Follow</button></div></div><div class="mstatus">'+curMatch.league.name+' • '+curMatch.league.country+' • '+(curMatch.fixture.venue?.name||'')+' • '+new Date(curMatch.fixture.date).toLocaleString()+' • Ref: '+(curMatch.fixture.referee||'TBA')+'</div>';document.getElementById('detail').classList.add('show');setTab('overview');}
+function syncOpenMatch(){
+  if(!curMatch || !document.getElementById('detail').classList.contains('show')) return;
+  var latest=games.find(function(g){return g.fixture.id==curMatch.fixture.id;});
+  if(!latest) return;
+  curMatch=latest;
+  var box=document.querySelector('#scoreboard .sbox');
+  if(box){
+    var score=(curMatch.goals.home!=null?curMatch.goals.home:'-')+' - '+(curMatch.goals.away!=null?curMatch.goals.away:'-');
+    if(curMatch.fixture.status.short=='NS') score='vs';
+    box.innerHTML=score+'<div style="font-size:9px;font-weight:400;color:#888;margin-top:3px">'+curMatch.fixture.status.long+(curMatch.fixture.status.elapsed?' • '+curMatch.fixture.status.elapsed+'\\'':'')+'</div>';
+  }
+  var meta=document.querySelector('#scoreboard .mstatus');
+  if(meta) meta.innerHTML=curMatch.league.name+' • '+curMatch.league.country+' • '+(curMatch.fixture.venue?.name||'')+' • '+new Date(curMatch.fixture.date).toLocaleString()+' • Ref: '+(curMatch.fixture.referee||'TBA');
+}
 function closeDetail(){document.getElementById('detail').classList.remove('show');}
 function setTab(t){curTab=t;document.querySelectorAll('.tb').forEach(e=>e.classList.remove('on'));document.getElementById('tb-'+t).classList.add('on');var c=document.getElementById('dContent');if(t=='overview'){var events=getCache('jeScores_events_'+curMatch.fixture.id);var html='<div style="background:#111;border:1px solid var(--border);border-radius:10px;padding:10px"><b style="color:var(--gold)">Match Info</b><br><br>Competition: '+curMatch.league.name+' ('+curMatch.league.country+')<br>Venue: '+(curMatch.fixture.venue?.name||'TBA')+'<br>Kickoff: '+new Date(curMatch.fixture.date).toLocaleString()+'<br>Status: '+curMatch.fixture.status.long+(curMatch.fixture.status.elapsed?' - '+curMatch.fixture.status.elapsed+'\'':'')+'<br>Referee: '+(curMatch.fixture.referee||'TBA')+'<br><br>';if(events && events.length>0){var goals=events.filter(ev=>ev.type=='Goal');if(goals.length>0){html+='<b>⚽ Goal Scorers</b><br>';goals.forEach(ev=>{html+=ev.time.elapsed+'\' '+ev.team.name+' - '+ev.player.name+(ev.assist?.name?' (Assist: '+ev.assist.name+')':'')+' - '+ev.detail+'<br>';});html+='<br>';}}html+='<span style="font-size:10px;color:#666">Every Goal. Every Update.</span></div>';c.innerHTML=html;if(!events) fetchDedup(W+"/v3/fixtures/events?fixture="+curMatch.fixture.id).then(d=>{setCache('jeScores_events_'+curMatch.fixture.id,d.response||[]);if(curTab=='overview') setTab('overview');});}else if(t=='lineup'){c.innerHTML='<div class="empty">Loading lineups...</div>';var k='jeScores_lineups_'+curMatch.fixture.id;var cached=getCache(k);if(cached){renderLineup(cached,c); if(cacheAge(k)>60000) fetchLineup(k,c);}else fetchLineup(k,c);}else if(t=='stats'){c.innerHTML='<div class="empty">Loading stats...</div>';var k='jeScores_stats_'+curMatch.fixture.id;var cached=getCache(k);if(cached){renderStats(cached,c); if(cacheAge(k)>30000) fetchStats(k,c);}else fetchStats(k,c);}else if(t=='events'){var k='jeScores_events_'+curMatch.fixture.id;var cached=getCache(k);if(cached){renderEvents(cached,c);if(cacheAge(k)>60000) fetchEvents(k,c);}else{c.innerHTML='<div class="empty">Loading events...</div>';fetchEvents(k,c);}}else if(t=='h2h'){c.innerHTML='<div class="empty">Loading H2H...</div>';var k='jeScores_h2h_'+curMatch.teams.home.id+'-'+curMatch.teams.away.id;var cached=getCache(k);if(cached){renderH2H(cached,c);}fetchH2H(k,c);}}
 function fetchLineup(k,c){fetchDedup(W+"/v3/fixtures/lineups?fixture="+curMatch.fixture.id).then(d=>{setCache(k,d.response||[]);renderLineup(d.response||[],c);}).catch(e=>{c.innerHTML='<div class="empty">Lineup not available<br>'+e.message+'</div>';});}
@@ -534,7 +572,22 @@ function loadMorePage(){
 }
 function loadTopScorersHub(){var main=document.getElementById('main');main.innerHTML='<div class="empty"><b>Top Scorers</b><br>Loading...</div>';var ids=[39,140,135,78,61];var season=new Date().getFullYear(); if(new Date().getMonth()<7) season--;var promises=ids.map(id=>fetchDedup(W+"/v3/players/topscorers?league="+id+"&season="+season).then(d=>{return {id:id,data:d.response||[]};}).catch(()=>{return {id:id,data:[]};}));Promise.all(promises).then(results=>{var html='<div class="league-card"><div class="league-head"><b>⚽ Top Scorers • Top 5 • '+season+'/'+(season+1)+'</b><span onclick="loadMorePage()" style="color:var(--gold);cursor:pointer">← Back</span></div></div>';results.forEach(r=>{var names={39:'EPL',140:'La Liga',135:'Serie A',78:'Bundesliga',61:'Ligue 1'};if(r.data.length==0) return;html+='<div class="league-card" style="padding:10px"><b style="color:var(--gold)">'+names[r.id]+'</b><table class="standings-table"><tr><th>Player</th><th>Team</th><th>G</th></tr>';r.data.slice(0,5).forEach(p=>{html+='<tr><td style="font-weight:700">'+p.player.name+'</td><td>'+p.statistics[0].team.name+'</td><td style="color:var(--gold);font-weight:900">'+p.statistics[0].goals.total+'</td></tr>';});html+='</table></div>';});main.innerHTML=html;});}
 buildDateTabs();loadMatches(false);
-setInterval(()=>{if(curPage=='matches' && document.visibilityState=='visible'){var dateStr=curDate.toISOString().split('T')[0];if(dateStr==new Date().toISOString().split('T')[0]){fetchFresh(dateStr,'jeScores_fixtures_'+dateStr);}}},30000);
+setInterval(function(){
+  if(curPage=='matches' && document.visibilityState=='visible'){
+    var dateStr=curDate.toISOString().split('T')[0];
+    if(dateStr==new Date().toISOString().split('T')[0]){
+      fetchFresh(dateStr,'jeScores_fixtures_'+dateStr);
+    }
+  }
+},30000);
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState=='visible' && curPage=='matches'){
+    var dateStr=curDate.toISOString().split('T')[0];
+    if(dateStr==new Date().toISOString().split('T')[0]){
+      fetchFresh(dateStr,'jeScores_fixtures_'+dateStr);
+    }
+  }
+});
 // FIX 400 ERROR: Clear old broken service worker cache
 if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){for(let r of regs){r.unregister();}});caches.keys().then(function(keys){keys.forEach(function(k){caches.delete(k);});});}
 </script>
